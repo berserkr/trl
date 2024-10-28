@@ -49,49 +49,24 @@ import warnings
 import torch
 from datasets import load_dataset
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, HfArgumentParser, BitsAndBytesConfig
-import torch.distributed as dist
-import os
 
 from trl import (
     ModelConfig,
     RewardConfig,
     RewardTrainer,
     get_kbit_device_map,
+    get_peft_config,
     get_quantization_config,
     setup_chat_format,
 )
 from trl.commands.cli_utils import RewardScriptArguments
-from deepspeed.utils import set_z3_leaf_modules
-from transformers.models.mixtral.modeling_mixtral import MixtralSparseMoeBlock
-from peft import LoraConfig, TaskType
 
-def setup(rank, world_size):
-    # Initialize the process group
-
-    if rank == 0:
-        dist.init_process_group(backend="gloo|nccl", rank=rank, world_size=world_size)
-    
-    torch.cuda.set_device(local_rank)
-
-def cleanup(rank):
-
-    if rank == 0:
-        dist.destroy_process_group()
 
 if __name__ == "__main__":
     parser = HfArgumentParser((RewardScriptArguments, RewardConfig, ModelConfig))
     script_args, training_args, model_config = parser.parse_args_into_dataclasses()
     training_args.gradient_checkpointing_kwargs = dict(use_reentrant=False)
-    training_args.center_rewards_coefficient=0.01
     training_args.bf16=True
-
-    # init distributed...
-
-    world_size = torch.cuda.device_count()
-    local_rank = int(os.environ["LOCAL_RANK"])
-
-    setup(os.environ["RANK"], world_size)
-    dist.barrier()
 
     ################
     # Model & Tokenizer
@@ -117,53 +92,26 @@ if __name__ == "__main__":
         quantization_config=quantization_config,
         use_cache=False if training_args.gradient_checkpointing else True,
     )
-
     tokenizer = AutoTokenizer.from_pretrained(
         model_config.model_name_or_path, trust_remote_code=model_config.trust_remote_code, use_fast=True
     )
-
     model = AutoModelForSequenceClassification.from_pretrained(
-        model_config.model_name_or_path, 
-        num_labels=1, 
-        trust_remote_code=model_config.trust_remote_code, 
-        **model_kwargs
+        model_config.model_name_or_path, num_labels=1, trust_remote_code=model_config.trust_remote_code, **model_kwargs
     )
     # Align padding tokens between tokenizer and model
+    tokenizer.pad_token = tokenizer.eos_token
     model.config.pad_token_id = tokenizer.pad_token_id
-    tokenizer.pad_token = '<pad>'
-    #tokenizer.pas_token = tokenizer.eos_token
     
-    #set_z3_leaf_modules(model, [MixtralSparseMoeBlock])
-
-    model = model.to(local_rank)
-    model = torch.nn.parallel.DistributedDataParallel(
-        model,
-        device_ids=[local_rank],
-        output_device=local_rank)
 
     # If post-training a base model, use ChatML as the default template
     if tokenizer.chat_template is None:
         model, tokenizer = setup_chat_format(model, tokenizer)
-        
-    """
-            "gate_proj",
-            "up_proj",
-            "down_proj",
-            "lm_head",
-    """
-    peft_config = LoraConfig(
-        r=32,
-        lora_alpha=16,
-        target_modules=[
-            "q_proj",
-            "k_proj",
-            "v_proj",
-            "o_proj",
-        ],
-        bias="none",
-        lora_dropout=0.05,  # Conventional
-        task_type=TaskType.SEQ_CLS,
-    )
+
+    if model_config.use_peft and model_config.lora_task_type != "SEQ_CLS":
+        warnings.warn(
+            "You are using a `task_type` that is different than `SEQ_CLS` for PEFT. This will lead to silent bugs"
+            " Make sure to pass --lora_task_type SEQ_CLS when using this script with PEFT."
+        )
 
     ##############
     # Load dataset
@@ -174,23 +122,15 @@ if __name__ == "__main__":
     ##########
     # Training
     ##########
-    print(model_config)
-    
     trainer = RewardTrainer(
         model=model,
         tokenizer=tokenizer,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        peft_config=peft_config,
+        peft_config=get_peft_config(model_config),
     )
     trainer.train()
-    torch.cuda.empty_cache()
-
-    # fsdp
-    # saving final model
-    if trainer.is_fsdp_enabled:
-        trainer.accelerator.state.fsdp_plugin.set_state_dict_type("FULL_STATE_DICT")
 
     ############################
     # Save model and push to Hub
@@ -202,9 +142,5 @@ if __name__ == "__main__":
 
     # Save and push to hub
     trainer.save_model(training_args.output_dir)
-    """
     if training_args.push_to_hub:
         trainer.push_to_hub(dataset_name=script_args.dataset_name)
-    """
-
-    cleanup(os.environ["RANK"])
