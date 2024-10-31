@@ -1,4 +1,5 @@
 import json
+from transformers import AutoTokenizer
 
 
 def prepare_chat_data(jsonl):
@@ -15,7 +16,7 @@ def prepare_chat_data(jsonl):
     return jsonl
 
 
-def process_file(data_file, out_file):
+def process_file(tokenizer, data_file, out_file):
     # data in pairs, assume size is even
     jsonl_data = []
     with open(data_file, 'r') as f:
@@ -68,8 +69,9 @@ def process_file(data_file, out_file):
                 rejected = jsonl1
 
             new_data = chosen
-            new_data['chosen'] = chosen['conversations']
-            new_data['rejected'] = rejected['conversations']  
+            #new_data['prompt'] = chosen['conversations'][0]['content'] if chosen['conversations'][0]['role'] == 'user' else chosen['conversations'][1]['content']
+            new_data['chosen'] = chosen['conversations'] #chosen['conversations'][0]['content'] if chosen['conversations'][0]['role'] == 'assistant' else chosen['conversations'][1]['content']
+            new_data['rejected'] = rejected['conversations'] #rejected['conversations'][0]['content'] if  rejected['conversations'][0]['role'] == 'assistant' else rejected['conversations'][1]['content']
 
             jsonl_data.append(new_data)
 
@@ -78,6 +80,9 @@ def process_file(data_file, out_file):
             fout.write(json.dumps(jsonl) + '\n')
 
 if __name__ == '__main__':
-    process_file('/u/bathen/data/helpsteer2/train.jsonl', '/proj/checkpoints/bathen/data/helpsteer2/rm_regular/train.jsonl')
-    process_file('/u/bathen/data/helpsteer2/val.jsonl', '/proj/checkpoints/bathen/data/helpsteer2/rm_regular/val.jsonl') 
+    model = '/proj/checkpoints/bathen/models/base/granite-3.0-8b-instruct'
+    tokenizer = AutoTokenizer.from_pretrained(model)
+
+    process_file(tokenizer, '/u/bathen/data/helpsteer2/train.jsonl', '/proj/checkpoints/bathen/data/helpsteer2/rm_regular/train.jsonl')
+    process_file(tokenizer, '/u/bathen/data/helpsteer2/val.jsonl', '/proj/checkpoints/bathen/data/helpsteer2/rm_regular/val.jsonl') 
 

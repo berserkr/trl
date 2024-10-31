@@ -59,6 +59,7 @@ def train(model_name_or_path,
         config=config,
         trust_remote_code=True,
         low_cpu_mem_usage=True,
+        device_map='auto'
     )
     model = prepare_model_for_kbit_training(model)
 
@@ -134,9 +135,19 @@ def train(model_name_or_path,
     trainer.save_model(training_arguments.output_dir)
 
 if __name__ == "__main__":
+    #dataset='/proj/checkpoints/bathen/data/helpsteer2/rm_regular'
+    #dataset='/proj/checkpoints/bathen/data/rm_mixtures/tahira_best'
+    #dataset='/proj/checkpoints/bathen/data/helpsteer2/rm_regular_twoepochs'
+    dataset='/proj/checkpoints/bathen/data/rm_mixtures/tahira_best'
+
+    base_model='/proj/checkpoints/bathen/models/base/granite-3.0-8b-instruct'
+    #rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm'
+    #rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_tahira_best'
+    rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_tm'
+    
     train(
-        '/proj/checkpoints/bathen/models/base/granite-3.0-8b-instruct',
-        '/proj/checkpoints/bathen/data/helpsteer2/rm_regular',
-        '/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm',
+        base_model,
+        dataset,
+        rm,
         2,
         8)
