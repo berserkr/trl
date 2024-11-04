@@ -138,16 +138,17 @@ if __name__ == "__main__":
     #dataset='/proj/checkpoints/bathen/data/helpsteer2/rm_regular'
     #dataset='/proj/checkpoints/bathen/data/rm_mixtures/tahira_best'
     #dataset='/proj/checkpoints/bathen/data/helpsteer2/rm_regular_twoepochs'
-    dataset='/proj/checkpoints/bathen/data/rm_mixtures/tahira_best'
+    #dataset='/proj/checkpoints/bathen/data/rm_mixtures/tahira_best'
+    dataset='/proj/checkpoints/bathen/data/rm_mixtures/golden_only'
 
     base_model='/proj/checkpoints/bathen/models/base/granite-3.0-8b-instruct'
     #rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm'
     #rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_tahira_best'
-    rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_tm'
+    rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_golden_only'
     
     train(
         base_model,
         dataset,
         rm,
         2,
-        8)
+        16)

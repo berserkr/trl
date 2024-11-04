@@ -5,11 +5,16 @@ from peft import PeftModel
 
 #model_name_or_path = "/proj/checkpoints/bathen/models/base/mistral7b_inst_v3"
 model_name_or_path = "/proj/checkpoints/bathen/models/base/granite-3.0-8b-instruct"
+
 #peft_id = "data/outputs/granite-3b-instruct-preview-16k-100krt/checkpoint-3602"
-peft_id = '/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm/checkpoint-4006'
+#peft_id = '/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm/checkpoint-4006'
+#peft_id = '/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_tm'
+peft_id = '/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_golden_only'
+
 #peft_id = "/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm"
 #merged_model_path = "data/outputs/granite-3b-instruct-preview-16k-100krt/merged/" 
-merged_model_path = "/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm/merged_rhlf/"
+#merged_model_path = "/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm/merged_rhlf/"
+merged_model_path = f"{peft_id}/merged"
 
 torch_dtype = torch.bfloat16
 # place the model on GPU

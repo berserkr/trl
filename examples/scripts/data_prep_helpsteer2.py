@@ -1,5 +1,7 @@
 import json
 from transformers import AutoTokenizer
+import uuid
+import copy
 
 
 def prepare_chat_data(jsonl):
@@ -24,8 +26,8 @@ def process_file(tokenizer, data_file, out_file):
         assert len(lines) % 2 == 0
 
         for i in range(0, len(lines)-1, 2): # in pairs
-            jsonl1 = prepare_chat_data(json.loads(lines[i]))
-            jsonl2 = prepare_chat_data(json.loads(lines[i+1]))
+            jsonl1 = json.loads(lines[i])
+            jsonl2 = json.loads(lines[i+1])
 
             sum1=sum2=0
             help1=help2=0
@@ -61,18 +63,39 @@ def process_file(tokenizer, data_file, out_file):
                 else:
                     chosen = jsonl2
                     rejected = jsonl1
+
             elif sum1 >= sum2:
                 chosen = jsonl1
                 rejected = jsonl2
+
             else:
                 chosen = jsonl2
                 rejected = jsonl1
 
             new_data = chosen
-            #new_data['prompt'] = chosen['conversations'][0]['content'] if chosen['conversations'][0]['role'] == 'user' else chosen['conversations'][1]['content']
-            new_data['chosen'] = chosen['conversations'] #chosen['conversations'][0]['content'] if chosen['conversations'][0]['role'] == 'assistant' else chosen['conversations'][1]['content']
-            new_data['rejected'] = rejected['conversations'] #rejected['conversations'][0]['content'] if  rejected['conversations'][0]['role'] == 'assistant' else rejected['conversations'][1]['content']
 
+            # new data
+            new_data['uuid'] = str(uuid.uuid1())
+            new_data['input'] = chosen['conversations'][0]['value'] if chosen['conversations'][0]['from'] =='user' else chosen['conversations'][1]['value']
+            new_data['output'] = chosen['conversations'][0]['value'] if chosen['conversations'][0]['from'] =='assistant' else chosen['conversations'][1]['value']
+            new_data['source'] = 'nvidia/HelpSteer2'
+            new_data['language_source'] = 'en'
+            new_data['number_turns'] = len(chosen['conversations'])
+
+            # delete unecessary data
+            del new_data['type']
+            del new_data['system']
+            del new_data['mask']
+
+            for i in range(0, len(chosen['conversations'])):
+                # remove labels...
+                del chosen['conversations'][i]['label'] 
+                del rejected['conversations'][i]['label']
+
+            #new_data['prompt'] = chosen['conversations'][0]['content'] if chosen['conversations'][0]['role'] == 'user' else chosen['conversations'][1]['content']
+            new_data['chosen'] = prepare_chat_data(copy.deepcopy(chosen))['conversations'] #chosen['conversations'][0]['content'] if chosen['conversations'][0]['role'] == 'assistant' else chosen['conversations'][1]['content']
+            new_data['rejected'] = prepare_chat_data(copy.deepcopy(rejected))['conversations'] #rejected['conversations'][0]['content'] if  rejected['conversations'][0]['role'] == 'assistant' else rejected['conversations'][1]['content']
+            
             jsonl_data.append(new_data)
 
     with open(out_file, 'w') as fout:
