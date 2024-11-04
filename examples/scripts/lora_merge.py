@@ -9,7 +9,8 @@ model_name_or_path = "/proj/checkpoints/bathen/models/base/granite-3.0-8b-instru
 #peft_id = "data/outputs/granite-3b-instruct-preview-16k-100krt/checkpoint-3602"
 #peft_id = '/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm/checkpoint-4006'
 #peft_id = '/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_tm'
-peft_id = '/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_golden_only'
+#peft_id = '/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_golden_only'
+peft_id = '/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_helpsteer2_3epoch'
 
 #peft_id = "/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm"
 #merged_model_path = "data/outputs/granite-3b-instruct-preview-16k-100krt/merged/" 

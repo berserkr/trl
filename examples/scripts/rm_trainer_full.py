@@ -11,7 +11,6 @@ from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,
     AutoTokenizer,
-    BitsAndBytesConfig,
 )
 
 # Transformer Reinforcement Learning
@@ -33,16 +32,6 @@ def train(model_name_or_path,
     tokenizer.pad_token = tokenizer.eos_token
 
     ##############
-    # Load quant
-    ##############
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.float16,  # if not set will throw a warning about slow speeds when training
-    )
-
-    ##############
     # Load model
     ##############
     config = AutoConfig.from_pretrained(
@@ -56,42 +45,13 @@ def train(model_name_or_path,
     model = AutoModelForSequenceClassification.from_pretrained(
         model_name_or_path,
         torch_dtype="auto",
-        quantization_config=bnb_config,
         config=config,
         trust_remote_code=True,
         low_cpu_mem_usage=True,
         device_map='auto'
     )
-    model = prepare_model_for_kbit_training(model)
 
     print(model)
-
-    ##############
-    # Load lora 
-    ##############
-    lora_alpha = 32
-    lora_dropout = 0.1
-    lora_r = 8
-
-    """
-    target_modules=[
-        "q_proj",
-        "k_proj",
-        "v_proj",
-        "o_proj",
-    ],
-    """
-    
-    target_modules = 'all-linear'
-
-    peft_config = LoraConfig(
-        r=lora_r,
-        lora_alpha=lora_alpha,
-        target_modules=target_modules,
-        bias="none",
-        lora_dropout=lora_dropout,  # Conventional
-        task_type=TaskType.SEQ_CLS,
-    )
 
     ##############
     # Load dataset
@@ -101,8 +61,6 @@ def train(model_name_or_path,
 
     print('#'*100)
     print(config)
-    print('#'*100)
-    print(peft_config)
     print('#'*100)
 
     training_arguments = RewardConfig(
@@ -126,7 +84,6 @@ def train(model_name_or_path,
         args=training_arguments,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        peft_config=peft_config,
     )
     trainer.train()
     torch.cuda.empty_cache()
@@ -139,15 +96,15 @@ def train(model_name_or_path,
     trainer.save_model(training_arguments.output_dir)
 
 if __name__ == "__main__":
-    #dataset='/proj/checkpoints/bathen/data/helpsteer2/rm_regular'
+    dataset='/proj/checkpoints/bathen/data/helpsteer2/rm_regular'
     #dataset='/proj/checkpoints/bathen/data/rm_mixtures/tahira_best'
     #dataset='/proj/checkpoints/bathen/data/helpsteer2/rm_regular_twoepochs'
-    dataset='/proj/checkpoints/bathen/data/rm_mixtures/tahira_best'
+    #dataset='/proj/checkpoints/bathen/data/rm_mixtures/tahira_best'
     #dataset='/proj/checkpoints/bathen/data/rm_mixtures/golden_only'
 
     base_model='/proj/checkpoints/bathen/models/base/granite-3.0-8b-instruct'
     #rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm'
-    rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_tahira_best_lr2en6'
+    rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_golden_lr2en6_full'
     #rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_helpsteer2_3epoch'
     
     train(
