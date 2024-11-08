@@ -1,6 +1,7 @@
 from datasets import load_dataset
 from peft import LoraConfig, TaskType, prepare_model_for_kbit_training
 from tqdm import tqdm
+import argparse
 
 # https://huggingface.co/docs/transformers/model_doc/auto#transformers.AutoConfig
 # https://huggingface.co/docs/transformers/model_doc/auto#transformers.AutoModelForCausalLM
@@ -96,9 +97,15 @@ def train(model_name_or_path,
     ##############
     # Load dataset
     ##############
-    train_dataset = load_dataset(dataset_name_or_path, split='train') #.to(local_rank)
-    eval_dataset = load_dataset(dataset_name_or_path, split='validation') #.to(local_rank)
-
+    try: # assume test and val in the splits...
+        train_dataset = load_dataset(dataset_name_or_path, split='train') #.to(local_rank)
+        eval_dataset = load_dataset(dataset_name_or_path, split='validation') #.to(local_rank)
+    except ValueError:
+        dataset = load_dataset(dataset_name_or_path, split='train')
+        train_val_split = dataset.train_test_split(test_size=0.1)
+        train_dataset = train_val_split['train']
+        eval_dataset = train_val_split['test']
+ 
     print('#'*100)
     print(config)
     print('#'*100)
@@ -138,21 +145,40 @@ def train(model_name_or_path,
 
     trainer.save_model(training_arguments.output_dir)
 
-if __name__ == "__main__":
-    #dataset='/proj/checkpoints/bathen/data/helpsteer2/rm_regular'
-    #dataset='/proj/checkpoints/bathen/data/rm_mixtures/tahira_best'
-    #dataset='/proj/checkpoints/bathen/data/helpsteer2/rm_regular_twoepochs'
-    dataset='/proj/checkpoints/bathen/data/rm_mixtures/tahira_best'
-    #dataset='/proj/checkpoints/bathen/data/rm_mixtures/golden_only'
 
-    base_model='/proj/checkpoints/bathen/models/base/granite-3.0-8b-instruct'
-    #rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm'
-    rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_tahira_best_lr2en6'
-    #rm='/proj/checkpoints/bathen/models/reward/granite_3.0_8b_instruct_rm_helpsteer2_3epoch'
-    
+parser = argparse.ArgumentParser()
+parser.add_argument('-d', '--data_path',
+        action="store", dest="data_path",
+        required=True,
+        help="path to dataset folder")
+
+parser.add_argument('-m', '--base_model',
+        action="store", dest="base_model",
+        required=True,
+        help="path to base model")
+
+parser.add_argument('-r', '--reward_model',
+        action="store", dest="reward_model",
+        required=True,
+        help="path to reward model")
+
+parser.add_argument('-e', '--epochs',
+        action="store", dest="epochs",
+        required=False,
+        default=2,
+        help="Number of epochs")
+
+parser.add_argument('-b', '--batch_size',
+         action="store", dest="batch_size",
+         default=8,
+         required=False,
+         help="Batch size for training")  
+
+if __name__ == "__main__":
+    args = parser.parse_args()
     train(
-        base_model,
-        dataset,
-        rm,
-        2,
-        8)
+        args.base_model,
+        args.data_path,
+        args.reward_model,
+        args.epochs,
+        args.batch_size)
