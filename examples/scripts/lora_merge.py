@@ -21,8 +21,9 @@ merged_model_path = f"{peft_id}/merged"
 
 def convert(model_name_or_path, peft_id, merged_model_path=None):
     if merged_model_path is None:
-        merged_model_path = f'{model_name_or_path}/merged'
-
+        merged_model_path = f'{peft_id}/merged'
+    
+    print(f'Saving merged model to {merged_model_path}')
 
     torch_dtype = torch.bfloat16
     # place the model on GPU
@@ -93,5 +94,5 @@ if __name__ =='__main__':
 
     convert(
             model_name_or_path=args.model_name_or_path, 
-            peft_id=peft_id, 
-            merged_model_path=merged_model_path)
+            peft_id=args.peft_id, 
+            merged_model_path=args.merged_model_path)

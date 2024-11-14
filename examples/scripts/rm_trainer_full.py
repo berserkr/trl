@@ -149,5 +149,5 @@ if __name__ == "__main__":
         args.base_model,
         args.data_path,
         args.reward_model,
-        args.epochs,
+        int(args.epochs),
         args.batch_size)

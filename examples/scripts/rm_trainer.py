@@ -27,7 +27,8 @@ def train(model_name_or_path,
           output_dir,
           num_epochs,
           per_device_train_batch_size,
-          learning_rate=2e-06):
+          learning_rate=2e-06,
+          weight_decay=1e-03):
         
     # https://huggingface.co/docs/transformers/en/model_doc/auto#transformers.AutoTokenizer.from_pretrained
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
@@ -124,7 +125,9 @@ def train(model_name_or_path,
         center_rewards_coefficient=0.01,
         # create checkpoint directories
         save_on_each_node=True,
-        learning_rate=learning_rate
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        lr_scheduler_type="cosine"
     )
 
     trainer = RewardTrainer(
@@ -180,5 +183,5 @@ if __name__ == "__main__":
         args.base_model,
         args.data_path,
         args.reward_model,
-        args.epochs,
+        int(args.epochs),
         args.batch_size)
